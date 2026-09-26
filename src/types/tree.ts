@@ -35,3 +35,39 @@ export function replaceNode(root: TreeNode, updated: TreeNode): TreeNode {
   if (root.id === updated.id) return updated
   return { ...root, children: root.children.map(c => replaceNode(c, updated)) }
 }
+
+/** Longest path length in plies from this node (0 if leaf). */
+export function maxDepth(node: TreeNode): number {
+  if (!node.children.length) return 0
+  let best = 0
+  for (const child of node.children) {
+    const d = maxDepth(child)
+    if (d > best) best = d
+  }
+  return 1 + best
+}
+
+/**
+ * Count alternative branches off the mainline (children[0] path).
+ * Each extra sibling of a mainline child counts as one fork.
+ */
+export function forksFromMainline(root: TreeNode): number {
+  let forks = 0
+  let node = root
+  while (node.children.length > 0) {
+    forks += node.children.length - 1
+    node = node.children[0]
+  }
+  return forks
+}
+
+/** Walk mainline (first child) and collect SANs, up to `limit`. */
+export function mainlineSans(root: TreeNode, limit = Infinity): string[] {
+  const sans: string[] = []
+  let node = root
+  while (node.children.length > 0 && sans.length < limit) {
+    node = node.children[0]
+    sans.push(node.san)
+  }
+  return sans
+}

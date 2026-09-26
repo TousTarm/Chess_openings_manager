@@ -4,112 +4,11 @@ import { ChessBoard, type Arrow } from '../components/ChessBoard'
 import { useTreeEditor } from '../hooks/useTreeEditor'
 import { sanToArrow } from '../lib/arrows'
 import type { Page } from '../types'
-import type { TreeNode } from '../types/tree'
 import { loadEco, lookupByFen } from '../lib/eco'
 
 interface TreeEditorProps {
   openingId: string
   navigate: (page: Page) => void
-}
-
-interface TreePanelProps {
-  root: TreeNode
-  currentNodeId: string
-  onNavigate: (nodeId: string) => void
-  onDelete: (nodeId: string) => void
-}
-
-function TreeNode_Row({
-  node,
-  depth,
-  currentNodeId,
-  onNavigate,
-  onDelete,
-  isLast,
-}: {
-  node: TreeNode
-  depth: number
-  currentNodeId: string
-  onNavigate: (nodeId: string) => void
-  onDelete: (nodeId: string) => void
-  isLast: boolean
-}) {
-  const isRoot = node.san === ''
-  const isActive = node.id === currentNodeId
-  const label = isRoot ? 'Start' : node.san
-
-  return (
-    <div>
-      <div
-        className={`flex items-center group transition-colors ${
-          isActive ? 'bg-chess-green/15' : 'hover:bg-chess-border/30'
-        }`}
-        style={{ paddingLeft: `${8 + depth * 14}px` }}
-      >
-        {depth > 0 && (
-          <span className="text-chess-border text-xs mr-1 select-none font-mono">
-            {isLast ? '└' : '├'}
-          </span>
-        )}
-        <button
-          onClick={() => onNavigate(node.id)}
-          className={`flex-1 text-left py-1 pr-2 text-sm font-mono truncate ${
-            isActive
-              ? 'text-chess-green font-bold'
-              : 'text-chess-text'
-          }`}
-        >
-          {label}
-          {node.note && (
-            <span className="ml-2 text-chess-muted text-xs font-sans italic">
-              {node.note.slice(0, 30)}{node.note.length > 30 ? '…' : ''}
-            </span>
-          )}
-        </button>
-        {!isRoot && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              onDelete(node.id)
-            }}
-            className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition-all px-2 py-1 text-sm leading-none shrink-0"
-            title="Delete this move and all continuations"
-          >
-            ×
-          </button>
-        )}
-      </div>
-      {node.children.map((child, idx) => (
-        <TreeNode_Row
-          key={child.id}
-          node={child}
-          depth={depth + 1}
-          currentNodeId={currentNodeId}
-          onNavigate={onNavigate}
-          onDelete={onDelete}
-          isLast={idx === node.children.length - 1}
-        />
-      ))}
-    </div>
-  )
-}
-
-function TreePanel({ root, currentNodeId, onNavigate, onDelete }: TreePanelProps) {
-  return (
-    <div
-      className="overflow-y-auto bg-chess-bg border-t border-chess-border shrink-0"
-      style={{ maxHeight: '28vh', scrollbarWidth: 'thin' }}
-    >
-      <TreeNode_Row
-        node={root}
-        depth={0}
-        currentNodeId={currentNodeId}
-        onNavigate={onNavigate}
-        onDelete={onDelete}
-        isLast={true}
-      />
-    </div>
-  )
 }
 
 /** Derive move number label for a breadcrumb entry.
@@ -276,7 +175,7 @@ export function TreeEditor({ openingId, navigate }: TreeEditorProps) {
       <div className="flex-1 flex items-center justify-center p-2 min-h-0">
         <div
           className="w-full"
-          style={{ maxWidth: 'min(100%, calc(100svh - 290px), 560px)' }}
+          style={{ maxWidth: 'min(100%, calc(100svh - 240px), 560px)' }}
         >
           <ChessBoard
             fen={fen}
@@ -326,13 +225,36 @@ export function TreeEditor({ openingId, navigate }: TreeEditorProps) {
         </div>
       )}
 
-      {/* ── TREE PANEL ───────────────────────────────────────────────── */}
-      <TreePanel
-        root={tree.root}
-        currentNodeId={editor.currentNode.id}
-        onNavigate={editor.navigateToNode}
-        onDelete={editor.deleteNode}
-      />
+      {/* ── PATH TO POSITION ─────────────────────────────────────────── */}
+      <div
+        className="bg-chess-bg border-t border-chess-border px-3 py-2 shrink-0 flex items-center gap-1.5 overflow-x-auto"
+        style={{ scrollbarWidth: 'none' }}
+      >
+        {breadcrumb.length === 0 ? (
+          <span className="text-chess-muted text-xs italic">Start position</span>
+        ) : (
+          breadcrumb.map((node, i) => {
+            const isLast = i === breadcrumb.length - 1
+            return (
+              <React.Fragment key={node.id}>
+                {i > 0 && (
+                  <span className="text-chess-border text-xs select-none shrink-0">→</span>
+                )}
+                <button
+                  onClick={() => editor.navigateTo(i + 1)}
+                  className={`font-mono text-xs whitespace-nowrap px-1.5 py-0.5 rounded transition-colors shrink-0 ${
+                    isLast
+                      ? 'bg-chess-green/15 text-chess-green font-bold'
+                      : 'text-chess-muted hover:text-chess-text hover:bg-chess-border/50'
+                  }`}
+                >
+                  {node.san}
+                </button>
+              </React.Fragment>
+            )
+          })
+        )}
+      </div>
 
       {/* ── BOTTOM BAR ───────────────────────────────────────────────── */}
       <div
